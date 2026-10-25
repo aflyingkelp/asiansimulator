@@ -1,15 +1,16 @@
 export const MOVES={
- light1:{name:'Opening cut',cost:10,damage:18,windup:.08,active:.1,recovery:.18,range:3.9,arc:1.5,push:.35},
- light2:{name:'Returning cut',cost:12,damage:24,windup:.1,active:.11,recovery:.19,range:4.1,arc:1.65,push:.5},
- light3:{name:'Falling grain',cost:16,damage:36,windup:.18,active:.12,recovery:.28,range:4.3,arc:1.7,push:1.3,stagger:.45},
- heavy:{name:'Stonebreaker',cost:28,damage:48,windup:.38,active:.16,recovery:.38,range:4.7,arc:1.15,push:2,stagger:.85},
- sweep:{name:'Harvest sweep',cost:38,damage:58,windup:.2,active:.27,recovery:.38,range:5.6,arc:Math.PI,push:2.7,stagger:.75,cooldown:8},
+ light1:{name:'Opening cut',cost:8,damage:18,windup:.045,active:.105,recovery:.07,range:4,arc:1.6,push:.35},
+ light2:{name:'Returning cut',cost:10,damage:24,windup:.05,active:.12,recovery:.08,range:4.2,arc:1.7,push:.5},
+ light3:{name:'Falling grain',cost:13,damage:36,windup:.09,active:.15,recovery:.14,range:4.5,arc:1.8,push:1.3,stagger:.45},
+ heavy:{name:'Stonebreaker',cost:23,damage:48,windup:.24,active:.17,recovery:.11,range:4.8,arc:1.25,push:2,stagger:.85},
+ uppercut:{name:'Skybreaker uppercut',cost:27,damage:39,windup:.09,active:.17,recovery:.16,range:4.5,arc:1.5,push:2.4,stagger:.7,launch:9.5},
+ sweep:{name:'Harvest sweep',cost:32,damage:58,windup:.13,active:.24,recovery:.17,range:5.7,arc:Math.PI,push:2.7,stagger:.75,cooldown:7},
 };
 export class Fighter {
  constructor(){this.stamina=100;this.action=null;this.time=0;this.combo=0;this.comboWindow=0;this.buffer=0;this.guarding=false;this.guardTime=0;this.dodge=0;this.dodgeCooldown=0;this.sweepCooldown=0;this.recovery=0;this.fired=false;}
  get busy(){return !!this.action||this.dodge>0||this.recovery>0;}
  get invulnerable(){return this.dodge>.08&&this.dodge<.32;}
- start(kind){if(kind==='light'&&this.action?.startsWith('light')){this.buffer=.3;return false;}if(this.busy)return false;if(kind==='dodge'){if(this.stamina<22||this.dodgeCooldown>0)return false;this.stamina-=22;this.dodge=.4;this.dodgeCooldown=.65;this.guarding=false;return true;}if(kind==='sweep'&&this.sweepCooldown>0)return false;const key=kind==='light'?'light'+(this.comboWindow>0?this.combo%3+1:1):kind,move=MOVES[key];if(!move||this.stamina<move.cost)return false;this.stamina-=move.cost;this.action=key;this.time=0;this.fired=false;this.guarding=false;this.buffer=0;if(kind==='sweep')this.sweepCooldown=move.cooldown;return true;}
+ start(kind){if(kind==='light'&&this.action?.startsWith('light')){this.buffer=.48;return false;}if(this.busy)return false;if(kind==='dodge'){if(this.stamina<20||this.dodgeCooldown>0)return false;this.stamina-=20;this.dodge=.4;this.dodgeCooldown=.55;this.guarding=false;return true;}if(kind==='sweep'&&this.sweepCooldown>0)return false;const key=kind==='light'?'light'+(this.comboWindow>0?this.combo%3+1:1):kind,move=MOVES[key];if(!move||this.stamina<move.cost)return false;this.stamina-=move.cost;this.action=key;this.time=0;this.fired=false;this.guarding=false;this.buffer=0;if(kind==='sweep')this.sweepCooldown=move.cooldown;return true;}
  tick(dt,guardHeld=false){this.dodge=Math.max(0,this.dodge-dt);this.dodgeCooldown=Math.max(0,this.dodgeCooldown-dt);this.sweepCooldown=Math.max(0,this.sweepCooldown-dt);this.recovery=Math.max(0,this.recovery-dt);this.comboWindow=Math.max(0,this.comboWindow-dt);this.buffer=Math.max(0,this.buffer-dt);if(this.action){const move=MOVES[this.action];this.time+=dt;if(this.time>=move.windup+move.active+move.recovery){const previous=this.action;this.action=null;if(previous.startsWith('light')){this.combo=Number(previous.at(-1));this.comboWindow=.75;if(this.buffer>0)this.start('light');}else{this.combo=0;this.comboWindow=0;}}}const guard=guardHeld&&!this.busy&&this.stamina>0;if(guard&&!this.guarding)this.guardTime=0;this.guarding=guard;if(guard)this.guardTime+=dt;if(!this.action&&!this.guarding&&this.dodge<=0)this.stamina=Math.min(100,this.stamina+dt*25);}
  consumeHit(){if(!this.action||this.fired)return null;const move=MOVES[this.action];if(this.time<move.windup)return null;this.fired=true;return {...move,key:this.action};}
  receive(damage){if(this.invulnerable)return {kind:'evade',damage:0};if(this.guarding&&this.guardTime<=.19){this.stamina=Math.min(100,this.stamina+12);return {kind:'parry',damage:0};}if(this.guarding){const cost=damage*1.1;if(this.stamina>=cost){this.stamina-=cost;return {kind:'block',damage:0};}this.stamina=0;this.guarding=false;this.recovery=.65;return {kind:'break',damage:Math.round(damage*.7)};}this.recovery=.24;this.action=null;this.buffer=0;return {kind:'hit',damage};}

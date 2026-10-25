@@ -1,0 +1,2 @@
+export function knockbackImpulse(strength){return 1.8+strength*2.2;}
+export function stepAirborne(actor,dt){if(actor.airborneVelocity===undefined)return false;actor.airborneVelocity-=25*dt;actor.g.position.y+=actor.airborneVelocity*dt;if(actor.g.position.y<=0){actor.g.position.y=0;delete actor.airborneVelocity;return false;}return true;}

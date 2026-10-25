@@ -15,7 +15,7 @@ export class CameraControls{
   document.addEventListener('pointerlockchange',()=>{const was=this.locked;this.locked=document.pointerLockElement===surface;this.sync();if(was&&!this.locked&&this.mode==='locked'&&this.isActive())this.onUnlock();});
   document.addEventListener('pointerlockerror',()=>this.failed());this.sync();
  }
- sync(){const locked=document.pointerLockElement===this.surface;this.button.textContent=this.mode==='locked'?'C · Locked camera':'C · Free cursor';this.button.setAttribute('aria-pressed',String(this.mode==='locked'));this.status.textContent=this.mode==='locked'?(locked?'Mouse look · Scroll to zoom · C unlocks cursor':'Click the world to capture mouse · C switches mode'):'Hold right mouse to orbit · Scroll to zoom · C locks cursor';document.body.classList.toggle('mouse-locked',locked);}
+ sync(){const locked=document.pointerLockElement===this.surface;this.button.textContent=this.mode==='locked'?'C · Locked camera':'C · Free cursor';this.button.setAttribute('aria-pressed',String(this.mode==='locked'));this.status.textContent=this.mode==='locked'?(locked?'Mouse look · Arrow keys orbit · Wheel zoom · C frees cursor':'Click world to capture · Arrow keys orbit · Wheel zoom'):'Arrow keys / hold right mouse orbit · Wheel zoom · C locks cursor';document.body.classList.toggle('mouse-locked',locked);}
  failed(){this.mode='free';this.sync();this.onMessage('Mouse capture unavailable here. Free cursor mode: hold right mouse to orbit.');}
  capture(){if(this.mode!=='locked')return;try{const pending=this.surface.requestPointerLock();pending?.catch(()=>this.failed());}catch{this.failed();}}
  release(){this.dragging=false;if(document.pointerLockElement===this.surface)document.exitPointerLock();}

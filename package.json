@@ -1,0 +1,13 @@
+{
+  "name": "dust-and-rice-long-valley",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node preview.cjs",
+    "test": "node verify-combat.mjs && node verify-knockback.mjs && node verify-camera.mjs && node verify-input.mjs && node verify-multiplayer.mjs"
+  }
+}
