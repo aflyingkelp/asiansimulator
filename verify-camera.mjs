@@ -1,0 +1,22 @@
+import assert from 'node:assert/strict';
+import {CameraControls,orbitOffset,zoomDistance,clampPitch} from './dist/camera-controls.js';
+for(let i=-30;i<=30;i++){const p=orbitOffset(i*Math.PI/3,.35,10);assert.ok(Math.abs(Math.hypot(p.x,p.y,p.z)-10)<1e-9);}
+assert.deepEqual(orbitOffset(0,0,10),{x:0,y:0,z:10});
+assert.ok(zoomDistance(10,120)>10);assert.ok(zoomDistance(10,-120)<10);
+assert.equal(zoomDistance(3.2,-150),3.2);assert.equal(zoomDistance(28,150),28);
+assert.equal(clampPitch(-10),.12);assert.equal(clampPitch(10),1.28);
+const listeners={},surfaceListeners={};let active=true,unlocks=0;
+globalThis.window={addEventListener(){}};
+globalThis.document={pointerLockElement:null,body:{classList:{toggle(){}}},addEventListener(k,fn){listeners[k]=fn;},exitPointerLock(){this.pointerLockElement=null;listeners.pointerlockchange();}};
+const surface={addEventListener(k,fn){surfaceListeners[k]=fn;},requestPointerLock(){document.pointerLockElement=this;listeners.pointerlockchange();return Promise.resolve();}};
+const button={setAttribute(){}};const status={};
+const c=new CameraControls(surface,{button,status,isActive:()=>active,onUnlock:()=>unlocks++,onMessage(){}});
+c.capture();assert.equal(document.pointerLockElement,surface);
+listeners.mousemove({movementX:3000,movementY:100});assert.ok(Math.abs(c.yaw)>Math.PI*2);assert.ok(c.pitch>.35);
+const old=c.distance;surfaceListeners.wheel({preventDefault(){},deltaY:80,deltaMode:0});assert.ok(c.distance>old);
+c.toggle();assert.equal(c.mode,'free');assert.equal(document.pointerLockElement,null);assert.equal(unlocks,0);
+const yaw=c.yaw;listeners.mousemove({movementX:50,movementY:0});assert.equal(c.yaw,yaw);
+surfaceListeners.mousedown({button:2,preventDefault(){}});listeners.mousemove({movementX:50,movementY:0});assert.ok(c.yaw<yaw);
+listeners.mouseup();c.toggle();assert.equal(c.mode,'locked');assert.equal(document.pointerLockElement,surface);
+document.exitPointerLock();assert.equal(unlocks,1);
+console.log('PASS: 360° orbit, pitch limits, zoom direction and bounds, lock/unlock, free-cursor drag, Escape unlock callback.');
