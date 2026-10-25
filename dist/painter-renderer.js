@@ -1,0 +1,15 @@
+import * as THREE from './vendor/three.module.js';
+import {Projector,RenderableFace,RenderableSprite} from './vendor/Projector.js';
+
+// Flat-colored vector triangles: no texture sampling or per-pixel CPU rasterizer.
+export class PainterRenderer {
+ constructor(){this.domElement=document.createElement('canvas');this.ctx=this.domElement.getContext('2d',{alpha:false});this.projector=new Projector();this.shadowMap={};this.color=new THREE.Color();this.light=new THREE.Vector3(-.4,.85,.3).normalize();this.info={render:{calls:1,triangles:0}};this.ratio=1;}
+ setPixelRatio(r){this.ratio=Math.min(r,1.25);}
+ setSize(w,h){this.w=w;this.h=h;this.domElement.width=Math.round(w*this.ratio);this.domElement.height=Math.round(h*this.ratio);this.ctx.setTransform(this.ratio,0,0,this.ratio,0,0);}
+ render(scene,camera){const started=performance.now(),ctx=this.ctx,w=this.w,h=this.h,hw=w/2,hh=h/2;ctx.globalAlpha=1;ctx.fillStyle=scene.background.getStyle();ctx.fillRect(0,0,w,h);const data=this.projector.projectScene(scene,camera,true,true);let faces=0;let style='',alpha=-1;
+  for(const e of data.elements){const m=e.material;if(!m||m.opacity<=0)continue;if(e instanceof RenderableFace){let a=e.v1.positionScreen,b=e.v2.positionScreen,c=e.v3.positionScreen,extra=null;if(a.z>1&&b.z>1&&c.z>1)continue;if(a.z<-1||b.z<-1||c.z<-1||a.w<0||b.w<0||c.w<0){const input=[e.v1.positionWorld,e.v2.positionWorld,e.v3.positionWorld],output=[],v=camera.matrixWorldInverse.elements;const depth=p=>-(v[2]*p.x+v[6]*p.y+v[10]*p.z+v[14]);for(let i=0;i<3;i++){const p=input[i],q=input[(i+1)%3],pd=depth(p),qd=depth(q),pi=pd>=camera.near,qi=qd>=camera.near;if(pi)output.push(p.clone());if(pi!==qi){const t=(camera.near-pd)/(qd-pd);output.push(p.clone().lerp(q,t));}}if(output.length<3)continue;for(const p of output)p.project(camera);[a,b,c]=output;extra=output[3];}const ax=a.x*hw+hw,ay=-a.y*hh+hh,bx=b.x*hw+hw,by=-b.y*hh+hh,cx=c.x*hw+hw,cy=-c.y*hh+hh;if(Math.max(ax,bx,cx)<0||Math.min(ax,bx,cx)>w||Math.max(ay,by,cy)<0||Math.min(ay,by,cy)>h)continue;
+   this.color.copy(m.color);if(m.vertexColors)this.color.multiply(e.color);if(!m.isMeshBasicMaterial)this.color.multiplyScalar(.65+Math.max(0,e.normalModel.dot(this.light))*.55);const distance=e.v1.positionWorld.distanceTo(camera.position),fog=THREE.MathUtils.smoothstep(distance,45,150)*.8;this.color.lerp(scene.background,fog);const next=this.color.getStyle();if(style!==next){ctx.fillStyle=next;style=next;}if(alpha!==m.opacity){ctx.globalAlpha=m.opacity;alpha=m.opacity;}ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(bx,by);ctx.lineTo(cx,cy);if(extra)ctx.lineTo(extra.x*hw+hw,-extra.y*hh+hh);ctx.closePath();ctx.fill();if(m.opacity===1){ctx.strokeStyle=ctx.fillStyle;ctx.lineWidth=.5;ctx.stroke();}faces++;
+  }else if(e instanceof RenderableSprite){const x=e.x*hw+hw,y=-e.y*hh+hh,r=Math.max(1,e.scale.x*hw*.5);ctx.globalAlpha=m.opacity;alpha=m.opacity;ctx.fillStyle=m.color.getStyle();style='';ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();}}
+  ctx.globalAlpha=1;this.info.render.triangles=faces;this.domElement.dataset.frameMs=(performance.now()-started).toFixed(1);this.domElement.dataset.triangles=faces;
+ }
+}
